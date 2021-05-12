@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "libfdr/fields.h"
+#include "libfdr/jrb.h"
 
 #define MAKSIMUM_KELIME 500
 #define KELIME_MAKS_KARAKTER 100
@@ -159,6 +160,11 @@ static JSONObjesi * jsonAyir(char* str, int * denge) {
 
 int main(int argc, char *argv[])
 {
+
+    JRB agac;
+    JRB basilacakA;
+    agac = make_jrb();
+
     //daha sonra ağaçlardaki veriler ile karşılaştıracağımız kelimeler
     char kelimeDizisi[MAKSIMUM_KELIME][KELIME_MAKS_KARAKTER];
     if (argv[2] != NULL)
@@ -187,22 +193,27 @@ int main(int argc, char *argv[])
 
 
         fp = fopen(".kilit", "r");
-        if (fp == NULL)
-        {
-            printf("%s\n",KILIT_YOK);
+        if (fp == NULL){
+            printf("%s",KILIT_YOK);
             exit(EXIT_FAILURE);
         }
         int indisJson = 0;
         while ((read = getline(&satir, &uzunluk, fp)) != -1) {
                 if ((satir[0] != '{' && satir[1] == ' ') ||(satir[0] != '}' && satir[1] == ' '))
                 {
-
                     JSONObjesi *json = jsonParcala(satir);
                     diziAnahtar[indisJson] = json->cift[0].anahtar;
                     diziDeger[indisJson] = json->cift[0].deger->stringDeger;
                     indisJson++;
                 }
         }
+
+        // anahtar ve değer sayısı kadar döngü döndürüp anahtar, değerleri ağaca ekledik
+        for (int i = 0; i < indisJson; i++)
+        {
+            (void) jrb_insert_str(agac,strdup(diziAnahtar[i]),new_jval_s(diziDeger[i]));
+        }
+
 
         fclose(fp);
         if (satir)
