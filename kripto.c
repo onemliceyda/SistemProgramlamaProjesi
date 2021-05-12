@@ -6,7 +6,6 @@
 
 #define MAKSIMUM_KELIME 500
 #define KELIME_MAKS_KARAKTER 100
-#define KILIT_YOK "Kilit dosyası yok veya bozulmuş"
 #define boslukKontrol(x) x == '\r' || x == '\n' || x == '\t' || x == ' '
 #define boslukSil(x) while(boslukKontrol(*x)) x++
 #define boslukSilHesap(x, y) while(boslukKontrol(*x)) { x++; y++; }
@@ -20,7 +19,7 @@ typedef struct sJsonObjesi {
     struct sJsonCifti *cift;
     int sayac;
 } JSONObjesi;
-
+    
 typedef struct sJsonCifti {
     char* anahtar;
     union uJsonDegeri *deger;
@@ -41,15 +40,15 @@ JSONObjesi *jsonParcala(char* jsonString) {
 
 void jsonBellekBosalt(JSONObjesi *obj) {
     int i;
-
+    
     if(obj == NULL)
         return;
-
+    
     if(obj->cift == NULL) {
         free(obj);
         return;
     }
-
+    
     for(i = 0; i < obj->sayac; i++) {
         if(obj->cift[i].anahtar != NULL)
             free(obj->cift[i].anahtar);
@@ -64,15 +63,15 @@ void jsonBellekBosalt(JSONObjesi *obj) {
             free(obj->cift[i].deger);
         }
     }
-
+    
 }
 
 static int sonrakiString(char* str, char ch) {
     int pos = 0;
-
+    
     if(str == NULL)
         return -1;
-
+    
     while(*str != ch && *str != '\0') {
         str++;
         pos++;
@@ -81,42 +80,42 @@ static int sonrakiString(char* str, char ch) {
 }
 
 static JSONObjesi * jsonAyir(char* str, int * denge) {
-
+    
     int _denge = 0;
     JSONObjesi *obj = (JSONObjesi *) malloc(sizeof(JSONObjesi));
     obj->sayac = 1;
     obj->cift = (JSONCifti *) malloc(sizeof(JSONCifti) *1);
-
+    
     while(*str != '\0') {
         boslukSilHesap(str, _denge);
         if(*str == '{') {
             str++;
             _denge++;
         } else if(*str == '"') {
-
+            
             int i = sonrakiString(++str, '"');
             if(i <= 0) {
                 jsonBellekBosalt(obj);
                 return NULL;
             }
-
+            
             JSONCifti geciciPtr = obj->cift[obj->sayac - 1];
-
+            
             geciciPtr.anahtar = (char *) malloc(sizeof(char) * i+1);
             memcpy(geciciPtr.anahtar, str, i * sizeof(char));
             geciciPtr.anahtar[i] = '\0';
-
+            
             str += i + 1;
             _denge += i + 2;
-
+            
             i = sonrakiString(str, ':');
             if(i == -1)
                 return NULL;
             str += i + 1;
             _denge += i + 1;
-
+            
             boslukSilHesap(str, _denge);
-
+            
             if(*str == '{') {
                 int _altNesneyiAyirmadanDenge = _denge;
                 int cocukNesneBoyutu;
@@ -144,7 +143,7 @@ static JSONObjesi * jsonAyir(char* str, int * denge) {
                 _denge += i + 2;
             }
             obj->cift[obj->sayac - 1] = geciciPtr;
-
+            
         } else if (*str == ',') {
             obj->sayac++;
             obj->cift = (JSONCifti *) realloc(obj->cift,obj->sayac * sizeof(JSONCifti));
@@ -159,7 +158,7 @@ static JSONObjesi * jsonAyir(char* str, int * denge) {
 }
 
 int main(int argc, char *argv[])
-{
+{ 
 
     JRB agac;
     JRB basilacakA;
@@ -179,10 +178,10 @@ int main(int argc, char *argv[])
             for (int i = 0; i < is->NF; i++)
             {
                 //okunan kelimeler
-                strcpy(kelimeDizisi[indis],is->fields[i]);
+                strcpy(kelimeDizisi[indis],is->fields[i]);   
                 indis++;
             }
-        }
+        }  
 
         FILE * fp;
         char * satir = NULL;
@@ -191,12 +190,9 @@ int main(int argc, char *argv[])
         char** diziAnahtar = (char ** ) malloc(sizeof(char *) * MAKSIMUM_KELIME * KELIME_MAKS_KARAKTER);
         char** diziDeger = (char ** ) malloc(sizeof(char *) * MAKSIMUM_KELIME * KELIME_MAKS_KARAKTER);
 
-
         fp = fopen(".kilit", "r");
-        if (fp == NULL){
-            printf("%s",KILIT_YOK);
+        if (fp == NULL)
             exit(EXIT_FAILURE);
-        }
         int indisJson = 0;
         while ((read = getline(&satir, &uzunluk, fp)) != -1) {
                 if ((satir[0] != '{' && satir[1] == ' ') ||(satir[0] != '}' && satir[1] == ' '))
@@ -208,21 +204,48 @@ int main(int argc, char *argv[])
                 }
         }
 
-        // anahtar ve değer sayısı kadar döngü döndürüp anahtar, değerleri ağaca ekledik
-        for (int i = 0; i < indisJson; i++)
+        //çözümlenebilir dosya oluşturulacak burada
+        if (strstr(argv[1],"-d") != NULL)
         {
-            (void) jrb_insert_str(agac,strdup(diziAnahtar[i]),new_jval_s(diziDeger[i]));
-        }
+            //kilit dosyasından okunan {kelime, kod} ikilisi JRB ağaçta -> {val, key} olarak
+            for (int i = 0; i < indisJson; i++)
+            {
+                (void) jrb_insert_str(agac,strdup(diziDeger[i]),new_jval_s(diziAnahtar[i]));
+            }
+			for (int i = 0; i < indis; i++)
+            {
+                basilacakA = jrb_find_str(agac,kelimeDizisi[i]);
+                if (basilacakA != NULL)
+                {
+                    printf("%s\n",kelimeDizisi[i]);
+                }else{
+                    //fprintf(fptr,"%s",basilacakA->val.s);
+                    //dosyaya yaz
+                    printf("%s \n",basilacakA->val.s);
+                }
+            }
 
+        }
+        //kilitli dosya oluşturulacak burada
+        else if (strcmp(argv[1],"-e") == 0)
+        {
+            //kilit dosyasından okunan {kelime, kod} ikilisi JRB ağaçta -> {key, val} şeklinde konulacaktır
+            for (int i = 0; i < indisJson; i++)
+            {
+                (void) jrb_insert_str(agac,strdup(diziAnahtar[i]),new_jval_s(diziDeger[i])); 
+            }
+        } else {
+            printf("Lütfen geçerli bir opsiyon seçiniz");
+        }
 
         fclose(fp);
         if (satir)
             free(satir);
         exit(EXIT_SUCCESS);
-
+        
     } else {
         printf("Lutfen bir 'giris_metin' degeri veriniz!\n");
     }
-
+    
     return 0;
 }
