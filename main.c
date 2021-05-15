@@ -6,7 +6,14 @@
 
 #define KELIME_SINIR 500
 #define KELIME_KARAKTER_SINIR 100
-#define KILIT_YOK "Kilit dosyası yok veya bozulmuş"
+#define KILIT_YOK "Kilit dosyası yok veya bozulmuş!"
+#define OPSIYON_BOS "Opsiyon değeri boş olmamalı!"
+#define HATALI_OPSIYON "Hatalı opsiyon! Lütfen geçerli bir opsiyon belirtiniz -d veya -e"
+#define GIRIS_METIN_YOK "Geçerli opsiyonun gerçekleştirilmesi için giriş metni vermeniz gerekli!"
+#define CIKIS_METIN_YOK "Geçerli opsiyonun gerçekleşmesi için çıkış metni vermeniz gerekli!"
+#define GIRIS_METIN_GECERSIZ "Lütfen geçerli bir giriş metni veriniz!"
+#define KRIPTOLANMIS_DOSYA "Kriptolanmış çıkış dosyası oluşturuldu"
+#define COZUMLENMIS_DOSYA "Çözümlenmiş çıkış dosyası oluşturuldu"
 
 typedef enum
 {
@@ -188,122 +195,246 @@ static JSONObjesi *jsonAyir(char *str, int *denge)
     return obj;
 }
 
-int main(int argc, char *argv[])
+//fields ile giriş metnini okur kelime dizisine değerler atanır
+int girisMetinOku(char **kelimeDizisi, char *argv, int indis, IS is)
 {
-
-    JRB agac;
-    JRB basilacakA;
-    agac = make_jrb();
-
-    //daha sonra ağaçlardaki veriler ile karşılaştıracağımız kelimeler
-    char kelimeDizisi[KELIME_SINIR][KELIME_KARAKTER_SINIR];
-    if (argv[2] != NULL)
+    if (argv != NULL)
     {
-        //inputstruct oluşturuldu
-        IS is;
         //file olarak açıldı
-        is = new_inputstruct(argv[2]);
-        int indis = 0;
+        is = new_inputstruct(argv);
+
+        //giriş metin gerçekten var mı kontrol
+        if (is == NULL)
+        {
+            printf("%s\n", GIRIS_METIN_GECERSIZ);
+            exit(1);
+        }
+
         while (get_line(is) >= 0)
         {
             for (int i = 0; i < is->NF; i++)
             {
                 //okunan kelimeler
-                strcpy(kelimeDizisi[indis], is->fields[i]);
+                kelimeDizisi[indis] = strdup(is->fields[i]);
+                //okununa indis artışı
                 indis++;
             }
         }
+    }
+    //sonlandırmak için
+    jettison_inputstruct(is);
+    return indis;
+}
 
-        FILE *fp;
-        char *satir = NULL;
-        size_t uzunluk = 0;
-        ssize_t read;
-        char **diziAnahtar = (char **)malloc(sizeof(char *) * KELIME_SINIR * KELIME_KARAKTER_SINIR);
-        char **diziDeger = (char **)malloc(sizeof(char *) * KELIME_SINIR * KELIME_KARAKTER_SINIR);
+//json dosyasını çözümler diziAnahtar dizisine okunan anahtarları atar indeks sayısını geri döner
+int jsonDosyasiCozumleAnahtar(char **diziAnahtar)
+{
+    int indisJsonAnahtar = 0;
+    FILE *fp;
+    char *satir = NULL;
+    size_t uzunluk = 0;
+    ssize_t read;
+    fp = fopen(".kilit", "r");
 
-        fp = fopen(".kilit", "r");
-        if (fp == NULL)
+    while ((read = getline(&satir, &uzunluk, fp)) != -1)
+    {
+        if ((satir[0] != '{' && satir[1] == ' ') || (satir[0] != '}' && satir[1] == ' '))
         {
-            printf("%s", KILIT_YOK);
-            exit(EXIT_FAILURE);
+            JSONObjesi *json = jsonParcala(satir);
+            diziAnahtar[indisJsonAnahtar] = json->cift[0].anahtar;
+            indisJsonAnahtar++;
         }
-        int indisJson = 0;
-        while ((read = getline(&satir, &uzunluk, fp)) != -1)
-        {
-            if ((satir[0] != '{' && satir[1] == ' ') || (satir[0] != '}' && satir[1] == ' '))
-            {
-                JSONObjesi *json = jsonParcala(satir);
-                diziAnahtar[indisJson] = json->cift[0].anahtar;
-                diziDeger[indisJson] = json->cift[0].deger->stringDeger;
-                indisJson++;
-            }
-        }
-        //dosyaya yazmak için
-        FILE *fptr;
-        //w parametresi ile açıldı
-        fptr = fopen("cikis_metin", "w");
+    }
+    return indisJsonAnahtar;
+}
 
-        //çözümlenebilir dosya oluşturulacak burada
-        if (strstr(argv[1], "-d") != NULL)
-        {
-            //kilit dosyasından okunan {kelime, kod} ikilisi JRB ağaçta -> {val, key} olarak
-            for (int i = 0; i < indisJson; i++)
-            {
-                (void)jrb_insert_str(agac, strdup(diziDeger[i]), new_jval_s(diziAnahtar[i]));
-            }
-            for (int i = 0; i < indis; i++)
-            {
-                basilacakA = jrb_find_str(agac, kelimeDizisi[i]);
-                if (basilacakA == NULL)
-                {
-                    //çıkışa verilecek
-                    printf("%s ", kelimeDizisi[i]);
-                }
-                else
-                {
-                    //dosyaya yaz
-                    fprintf(fptr, "%s ", basilacakA->val.s);
-                }
-            }
-        }
+//json dosyasını çözümler diziDeger dizisine okunan değerleri atar indeks sayısını geri döner
+int jsonDosyasiCozumleDeger(char **diziDeger)
+{
+    int indisJsonDeger = 0;
+    FILE *fp;
+    char *satir = NULL;
+    size_t uzunluk = 0;
+    ssize_t read;
+    fp = fopen(".kilit", "r");
 
-        //kilitli dosya oluşturulacak burada
-        else if (strcmp(argv[1], "-e") == 0)
+    while ((read = getline(&satir, &uzunluk, fp)) != -1)
+    {
+        if ((satir[0] != '{' && satir[1] == ' ') || (satir[0] != '}' && satir[1] == ' '))
         {
-            //kilit dosyasından okunan {kelime, kod} ikilisi JRB ağaçta -> {key, val} şeklinde konulacaktır
-            for (int i = 0; i < indisJson; i++)
-            {
-                (void)jrb_insert_str(agac, strdup(diziAnahtar[i]), new_jval_s(diziDeger[i]));
-            }
-            for (int i = 0; i < indis; i++)
-            {
-                basilacakA = jrb_find_str(agac, kelimeDizisi[i]);
-                if (basilacakA == NULL)
-                {
-                    printf("%s ", kelimeDizisi[i]);
-                }
-                else
-                {
-                    //dosyaya yazılacak
-                    //printf("%s \n",basilacakA->val.s);
-                    fprintf(fptr, "%s ", basilacakA->val.s);
-                }
-            }
+            JSONObjesi *json = jsonParcala(satir);
+            diziDeger[indisJsonDeger] = json->cift[0].deger->stringDeger;
+            indisJsonDeger++;
+        }
+    }
+    return indisJsonDeger;
+}
+
+//çözümlenebilir dosya oluşturulacak burada
+void cozumlenebilirCikisOlustur(char *argv, JRB agac, JRB geciciAgac, char **kelimeDizisi, char **diziAnahtar, char **diziDeger, int indis, int indisJson)
+{
+    //dosyaya yazmak için
+    FILE *fptr;
+    //w parametresi ile açıldı
+    fptr = fopen(argv, "w");
+
+    //kilit dosyasından okunan {kelime, kod} ikilisi JRB ağaçta -> {val, key} olarak
+    for (int i = 0; i < indisJson; i++)
+    {
+        (void)jrb_insert_str(agac, strdup(diziDeger[i]), new_jval_s(diziAnahtar[i]));
+    }
+    for (int i = 0; i < indis; i++)
+    {
+        geciciAgac = jrb_find_str(agac, kelimeDizisi[i]);
+        if (geciciAgac == NULL)
+        {
+            //çıkışa verilecek
+            fprintf(fptr, "%s ", kelimeDizisi[i]);
         }
         else
         {
-            printf("Lütfen geçerli bir opsiyon seçiniz");
+            //dosyaya yaz
+            fprintf(fptr, "%s ", geciciAgac->val.s);
         }
+    }
+}
 
-        fclose(fp);
-        if (satir)
-            free(satir);
-        exit(EXIT_SUCCESS);
+void kriptolanmisCikisOlustur(char *argv, JRB agac, JRB geciciAgac, char **kelimeDizisi, char **diziAnahtar, char **diziDeger, int indis, int indisJson)
+{
+    //dosyaya yazmak için
+    FILE *fptr;
+    //w parametresi ile açıldı
+    fptr = fopen(argv, "w");
+    for (int i = 0; i < indisJson; i++)
+    {
+        (void)jrb_insert_str(agac, strdup(diziAnahtar[i]), new_jval_s(diziDeger[i]));
+    }
+    for (int i = 0; i < indis; i++)
+    {
+        geciciAgac = jrb_find_str(agac, kelimeDizisi[i]);
+        if (geciciAgac == NULL)
+        {
+            //çıkışa verilecek
+            fprintf(fptr, "%s ", kelimeDizisi[i]);
+        }
+        else
+        {
+            //dosyaya yazılacak
+            //printf("%s \n",basilacakA->val.s);
+            fprintf(fptr, "%s ", geciciAgac->val.s);
+        }
+    }
+}
+
+//bellekte yer tahsis eden tek boyutlu diziler serbest bırakılacak
+void tekDiziSerbest(char *dizi)
+{
+    free(dizi);
+}
+
+//bellekte yer tahsis eden cok boyutlu diziler serbest bırakılacak
+void cokDiziSerbest(char **dizi)
+{
+    free(dizi);
+}
+
+//inputstruct serbest bırakılacak
+static void libfdrSerbest(IS is)
+{
+    jettison_inputstruct(is);
+}
+
+int main(int argc, char *argv[])
+{
+
+    //inputstruct oluştur
+    IS isGiris, isJson;
+
+    //ön parametre kontrolü
+    isJson = new_inputstruct(".kilit");
+    if (isJson == NULL) //kilit dosyası yok ise
+    {
+        printf("%s\n", KILIT_YOK);
+        exit(EXIT_FAILURE);
+    }
+    else if (argv[1] == NULL) //opsiyon boş ise
+    {
+        printf("%s\n", OPSIYON_BOS);
+        exit(EXIT_FAILURE);
+    }
+    else if (argv[2] == NULL) //giriş metni parametresi boş ise
+    {
+        printf("%s\n", GIRIS_METIN_YOK);
+        exit(EXIT_FAILURE);
+    }
+    else if (argv[3] == NULL) //çıkış metni parametresi boş ise
+    {
+        printf("%s\n", CIKIS_METIN_YOK);
+        exit(EXIT_FAILURE);
     }
     else
     {
-        printf("Lutfen bir 'giris_metin' degeri veriniz!\n");
-    }
 
+        //giriş metni okunurken indisi tutacağız
+        int indis = 0;
+
+        //ağaç örneği
+        JRB agac;
+        //geçici ağaç
+        JRB geciciAgac;
+        ///jrb ağaç oluştur
+        agac = make_jrb();
+
+        //boyut için
+        char *kelimeKarakterSinir = (char *)malloc((sizeof(char) * KELIME_KARAKTER_SINIR));
+        //veri tutucu string diziler
+        //giriş metninin kelimelerini tutacak dizi
+        char **kelimeDizisi = (char **)malloc(sizeof(kelimeKarakterSinir) * KELIME_SINIR);
+        //.kilit dosyası anahtarları tutacağımız dizi sonra ağaca ekleyeceğiz
+        char **diziAnahtar = (char **)malloc(sizeof(kelimeKarakterSinir) * KELIME_SINIR);
+        //.kilit dosyası değerleri tutacağımız dizi sonra ağaca ekleyeceğiz
+        char **diziDeger = (char **)malloc(sizeof(kelimeKarakterSinir) * KELIME_SINIR);
+
+        int indisJsonAnahtar = 0;
+        //json dosyası okundu anahtarlar diziAnahtar'a atandı indeks geri dönüldü
+        indisJsonAnahtar = jsonDosyasiCozumleAnahtar(diziAnahtar);
+
+        int indisJsonDeger = 0;
+        //json dosyası okundu değerler diziDeger'e atandı indeks geri dönüldü
+        indisJsonDeger = jsonDosyasiCozumleDeger(diziDeger);
+
+        //giriş metni okundu kelime dizisi olarak, kelimeDizisine atandı
+        indis = girisMetinOku(kelimeDizisi, argv[2], indis, isGiris);
+
+        //orijinal metindeki kelimeler yerine boşlukla ayrılmış Huffman kodları yazılmış metin tabanlı (ASCII) dosyadır, ağaç oluşturur, {kelime, kod} ikilisi JRB ağaçta -> {key, val} şeklinde eklendi
+        if (strcmp(argv[1], "-e") == 0) //gelen parametre -e ise
+        {
+            //kilit dosyasında olmayan bir kelime karşılaşılırsa kelimenin orijinali çıkış dosyasına yazılıyor
+            kriptolanmisCikisOlustur(argv[3], agac, geciciAgac, kelimeDizisi, diziAnahtar, diziDeger, indis, indisJsonDeger);
+            printf("%s\n", KRIPTOLANMIS_DOSYA);
+            exit(EXIT_SUCCESS);
+        }
+        //bir kilit kullanılarak çözümlenmiş okunabilir metin (ASCII) dosyadır, ağaç oluşturur, {kelime, kod} ikilisi JRB ağaçta -> {val, key} olarak eklendi
+        else if (strcmp(argv[1], "-d") == 0) //gelen parametre -d ise
+        {
+            //kriptolanmış dosya içinde ağaçta olmayan bir kelimeye rastlanırsa, kriptolanmış kelime çıkışa yazıldı
+            cozumlenebilirCikisOlustur(argv[3], agac, geciciAgac, kelimeDizisi, diziAnahtar, diziDeger, indis, indisJsonAnahtar);
+            printf("%s\n", COZUMLENMIS_DOSYA);
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            printf("%s\n", HATALI_OPSIYON);
+            exit(EXIT_FAILURE);
+        }
+
+        //tahsis edilen bellek geri bırakıldı
+        tekDiziSerbest(kelimeKarakterSinir);
+        cokDiziSerbest(kelimeDizisi);
+        cokDiziSerbest(diziAnahtar);
+        cokDiziSerbest(diziDeger);
+        //jettison fonksiyonlar içerisinde görevi bittikçe kullanıldı
+        libfdrSerbest(isJson);
+    }
     return 0;
 }
