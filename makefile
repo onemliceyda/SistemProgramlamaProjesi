@@ -1,12 +1,12 @@
 CC = gcc
-OBJ = main2.o libfdr/fields.o libfdr/jval.o libfdr/jrb.o
+OBJ = main.o libfdr/fields.o libfdr/jval.o libfdr/jrb.o
 
 all: kripto
 
-kripto: main2.o libfdr/fields.o libfdr/jval.o libfdr/jrb.o
+kripto: main.o libfdr/fields.o libfdr/jval.o libfdr/jrb.o
 	$(CC) $(OBJ) -o $@
 
-main2.o: main2.c
+main.o: main.c
 	$(CC) -c $<
 
 libdr/fields.o: libfdr/fields.c libfdr/fields.h
@@ -19,8 +19,13 @@ libdr/jrb.o: libfdr/jrb.c libfdr/jrb.h
 	$(CC) -c $<
 
 clean:
-	rm *.o
+	rm -f *.o kripto
 
-vclean:	
-	rm -rf *.o
-	rm kripto
+cleanall:
+	rm -f *.o kripto encripted decripted *.txt ornek_metin .kilit
+
+run:
+	make -s clean
+	make -s
+	./kripto -e ornek_metin encripted
+	./kripto -d ornek_metin decripted

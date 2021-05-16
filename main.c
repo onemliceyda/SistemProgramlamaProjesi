@@ -7,6 +7,7 @@
 #define KELIME_SINIR 500
 #define KELIME_KARAKTER_SINIR 100
 #define KILIT_YOK "Kilit dosyası yok veya bozulmuş!"
+#define DOSYA_FORMAT_YANLIS ".kilit dosyası Json dosya formatına uygun değil!"
 #define OPSIYON_BOS "Opsiyon değeri boş olmamalı!"
 #define HATALI_OPSIYON "Hatalı opsiyon! Lütfen geçerli bir opsiyon belirtiniz -d veya -e"
 #define GIRIS_METIN_YOK "Geçerli opsiyonun gerçekleştirilmesi için giriş metni vermeniz gerekli!"
@@ -226,6 +227,44 @@ int girisMetinOku(char **kelimeDizisi, char *argv, int indis, IS is)
     return indis;
 }
 
+void jsonFormatKontrol()
+{
+    int parantezSayisi = 0, tirnakSayisi = 0, ikiNoktaSayisi = 0, satir = 0;
+    char *okunan;
+    IS jsonDosya;
+    jsonDosya = new_inputstruct(".kilit");
+    while (get_line(jsonDosya) >= 0)
+    {
+        int i = 0;
+        while (i < jsonDosya->NF)
+        {
+            okunan = strdup(jsonDosya->fields[i]);
+            int okunanUzunluk = strlen(okunan);
+            for (int j = 0; j < okunanUzunluk; j++)
+            {
+                if (okunan[j] == '{' || okunan[j] == '}')
+                    parantezSayisi += 1;
+                else if (okunan[j] == '"')
+                    tirnakSayisi += 1;
+                else if (okunan[j] == ':')
+                    ikiNoktaSayisi += 1;
+            }
+            i++;
+        }
+    }
+    satir = jsonDosya->line;
+    jettison_inputstruct(jsonDosya);
+    if (parantezSayisi != 2 && tirnakSayisi != 4 * (satir - 2) && ikiNoktaSayisi != satir - 2)
+    {
+        printf("%s\n", DOSYA_FORMAT_YANLIS);
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+        return;
+    }
+}
+
 //json dosyasını çözümler diziAnahtar dizisine okunan anahtarları atar indeks sayısını geri döner
 int jsonDosyasiCozumleAnahtar(char **diziAnahtar)
 {
@@ -374,6 +413,8 @@ int main(int argc, char *argv[])
     }
     else
     {
+        //.kilit dosya formatını kontrol eder
+        jsonFormatKontrol();
 
         //giriş metni okunurken indisi tutacağız
         int indis = 0;
