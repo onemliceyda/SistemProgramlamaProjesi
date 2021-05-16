@@ -1,12 +1,12 @@
 CC = gcc
-OBJ = main.o libfdr/fields.o libfdr/jval.o libfdr/jrb.o
+OBJ = main2.o libfdr/fields.o libfdr/jval.o libfdr/jrb.o
 
 all: kripto
 
-kripto: main.o libfdr/fields.o libfdr/jval.o libfdr/jrb.o
+kripto: main2.o libfdr/fields.o libfdr/jval.o libfdr/jrb.o
 	$(CC) $(OBJ) -o $@
 
-main.o: main.c
+main2.o: main2.c
 	$(CC) -c $<
 
 libdr/fields.o: libfdr/fields.c libfdr/fields.h
