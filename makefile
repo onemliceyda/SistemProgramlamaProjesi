@@ -13,7 +13,7 @@ clean:
 	rm -f *.o kripto
 
 cleanall:
-	rm -f *.o kripto encripted decripted *.txt ornek_metin .kilit
+	rm -f *.o kripto encripted decripted *.txt ornek_metin .kilit *.a
 
 run:
 	make -s clean
