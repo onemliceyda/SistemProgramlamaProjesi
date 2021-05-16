@@ -1,9 +1,9 @@
 CC = gcc
-OBJ = main.o libfdr.a
+OBJ = main.o ./libfdr/libfdr.a
 
 all: kripto
 
-kripto: main.o libfdr.a
+kripto: main.o ./libfdr/libfdr.a
 	$(CC) -w $(OBJ) -o $@
 
 main.o: main.c
