@@ -26,7 +26,7 @@ Hilal Yıldız (Proje Üyesi)
 
 Derleme Süreci:
 
-Proje ana dizinine libfdr.a dosyasının verilmesi yeterlidir. ornek_metin ve .kilit dosyaları ile make, run, clean ve cleanall komutları icra edilebilmektedir.
+Proje çalıştırılırken libfdr klasörü içerisinde libfdr.a dosyasının verilmesi yeterlidir. ornek_metin ve .kilit dosyaları ile make, run, clean ve cleanall komutları icra edilebilmektedir.
 Bunun yanı sıra -d veya -e opsiyonları ile birlikte ornek_metin yerine herhangi bir giris_metin vererek (tabi ki parametreye göre isim değişkenlik gösterebilir) bir cikis_metin (ve yine parametreye göre) elde edebiliriz.
 Programa verilen parametrelerin sayısı ve doğruluğu kontrol edilerek seçilen opsiyona göre kriptolu veya çözümlenmiş dosyaları üretmektedir.
 
